@@ -708,3 +708,524 @@ jinja2
 |  `{% macro %}`  | 定义可复用组件 |   `{% macro render() %}`   |
 | `{% include %}` |   嵌入子模板   | `{% include 'nav.html' %}` |
 |        `        |    filter`     |         应用过滤器         |
+
+## 模板与 Flask 路由结合使用
+
+### 项目结构
+
+text
+
+```text
+/myapp
+   ├── app.py
+   ├── templates/
+   │    ├── base.html
+   │    ├── index.html
+   │    ├── user_profile.html
+   │    └── macros/
+   │         └── product_card.html
+   └── static/
+        └── css/
+             └── style.css
+```
+
+------
+
+### 1. 基础模板 (templates/base.html)
+
+jinja2
+
+```jinja2
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}默认标题{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav>
+        <a href="{{ url_for('home') }}">首页</a>
+        <a href="{{ url_for('user_profile', username='guest') }}">示例用户</a>
+    </nav>
+    
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+
+    {% block scripts %}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {% endblock %}
+</body>
+</html>
+```
+
+------
+
+### 2. 首页模板 (templates/index.html)
+
+jinja2
+
+```jinja2
+{% extends "base.html" %}
+
+{% block title %}欢迎来到电商平台{% endblock %}
+
+{% block content %}
+    <h1>今日热销商品</h1>
+    
+    <div class="product-grid">
+        {% from "macros/product_card.html" import product_card %}
+        
+        {% for product in products %}
+            {{ product_card(product) }}
+        {% else %}
+            <p class="empty">暂无商品</p>
+        {% endfor %}
+    </div>
+{% endblock %}
+```
+
+------
+
+### 3. 商品卡片宏 (templates/macros/product_card.html)
+
+jinja2
+
+```jinja2
+{% macro product_card(product) %}
+<div class="product-card">
+    <h3>{{ product.name }}</h3>
+    <p class="price">{{ product.price | format_currency }}</p>
+    <div class="tags">
+        {% if product.is_new %}
+            <span class="tag new">新品</span>
+        {% endif %}
+        {% if product.stock < 10 %}
+            <span class="tag low-stock">仅剩{{ product.stock }}件</span>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+```
+
+------
+
+### 4. Flask 应用代码 (app.py)
+
+python
+
+```python
+from flask import Flask, render_template
+from datetime import datetime
+
+app = Flask(__name__)
+
+# 自定义过滤器
+@app.template_filter('format_currency')
+def format_currency(value):
+    return f"¥{value:.2f}"
+
+# 模拟商品数据
+def get_featured_products():
+    return [
+        {'name': '无线耳机', 'price': 299.0, 'stock': 5, 'is_new': True},
+        {'name': '智能手表', 'price': 899.0, 'stock': 15, 'is_new': False},
+        {'name': '便携充电宝', 'price': 159.0, 'stock': 20, 'is_new': True}
+    ]
+
+# 首页路由
+@app.route('/')
+def home():
+    return render_template('index.html',
+                         products=get_featured_products(),
+                         current_time=datetime.now())
+
+# 用户资料页路由
+@app.route('/user/<username>')
+def user_profile(username):
+    return render_template('user_profile.html',
+                         username=username,
+                         join_date=datetime(2023, 1, 1))
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+------
+
+### 5. 用户资料页模板 (templates/user_profile.html)
+
+jinja2
+
+```jinja2
+{% extends "base.html" %}
+
+{% block title %}{{ username }}的资料页{% endblock %}
+
+{% block content %}
+    <div class="profile-header">
+        <h1>{{ username }}</h1>
+        <p>注册于 {{ join_date.strftime('%Y-%m-%d') }}</p>
+    </div>
+
+    <div class="recent-activity">
+        <h2>最近活动</h2>
+        {% if activities %}
+            <ul>
+            {% for activity in activities %}
+                <li>{{ activity.type }} - {{ activity.time | datetimeformat }}</li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>暂无活动记录</p>
+        {% endif %}
+    </div>
+{% endblock %}
+```
+
+------
+
+### 运行效果说明
+
+1. **首页路由 (`/`)**：
+   - 显示带有商品卡片的网格布局
+   - 每个商品显示价格（自动格式化为货币）
+   - 库存少于10件显示预警标签
+   - 新品显示特殊标记
+2. **用户资料页路由 (`/user/<username>`)**：
+   - 动态显示用户名标题
+   - 格式化显示注册日期
+   - 显示活动时间线（示例中未实现数据，可自行扩展）
+
+------
+
+### 关键集成点
+
+|     功能     |           实现方式            |
+| :----------: | :---------------------------: |
+|   模板继承   |   `extends` + `block` 指令    |
+| 动态数据传递 |   `render_template()` 参数    |
+| URL 安全生成 |       `url_for()` 函数        |
+| 自定义过滤器 | `@app.template_filter` 装饰器 |
+|   组件复用   |       宏 (`macro`) 定义       |
+|   条件渲染   |     `if`/`else` 控制结构      |
+|   循环渲染   |        `for` 循环结构         |
+
+------
+
+### 测试运行步骤
+
+1. 安装依赖：
+
+   bash
+
+   ```bash
+   pip install flask
+   ```
+
+2. 创建项目结构：
+
+   bash
+
+   ```bash
+   mkdir -p myapp/{templates/macros,static/css}
+   ```
+
+3. 将上述代码文件放入对应目录
+
+4. 启动应用：
+
+   bash
+
+   ```bash
+   python app.py
+   ```
+
+5. 访问查看：
+
+   - http://localhost:5000/
+   - http://localhost:5000/user/testuser
+
+## 静态文件
+
+### 一、静态文件基础配置
+
+#### 1. 默认目录结构
+
+bash
+
+```bash
+/myapp
+   ├── app.py
+   ├── static/          # 核心静态文件夹
+   │    ├── css/
+   │    ├── js/
+   │    ├── images/
+   │    └── favicon.ico
+   └── templates/
+```
+
+#### 2. 基础引用方法
+
+jinja2
+
+```jinja2
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<img src="{{ url_for('static', filename='images/logo.png') }}">
+```
+
+------
+
+### 二、进阶配置技巧
+
+#### 1. 自定义静态路径
+
+python
+
+```python
+app = Flask(__name__, static_folder='assets')  # 修改默认静态文件夹名称
+```
+
+#### 2. 生产环境配置
+
+python
+
+```python
+# 配置 CDN 地址（生产环境）
+app.config['STATIC_URL'] = 'https://cdn.example.com/static/'
+
+# 模板中动态切换
+<link href="{{ config.STATIC_URL }}css/style.css" rel="stylesheet">
+```
+
+#### 3. 缓存控制（推荐扩展）
+
+使用 `Flask-Static-Digest` 自动添加文件哈希：
+
+python
+
+```python
+from flask_static_digest import FlaskStaticDigest
+digest = FlaskStaticDigest(app)
+```
+
+生成带哈希的文件名：
+
+jinja2
+
+```jinja2
+<link href="{{ static_url_for('static', filename='css/style.css') }}">
+```
+
+输出结果：
+
+html
+
+```html
+<link href="/static/css/style-d41d8cd98f.css" rel="stylesheet">
+```
+
+------
+
+### 三、版本控制策略
+
+#### 1. 手动版本控制
+
+jinja2
+
+```jinja2
+<link href="/static/css/style.css?v=1.2.3" rel="stylesheet">
+```
+
+#### 2. 自动时间戳
+
+python
+
+```python
+@app.context_processor
+def inject_version():
+    return {'version': int(time.time())}
+```
+
+模板中使用：
+
+jinja2
+
+```jinja2
+<script src="/static/js/app.js?v={{ version }}"></script>
+```
+
+------
+
+### 四、安全最佳实践
+
+#### 1. 上传文件处理
+
+python
+
+```python
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return abort(400)
+    file = request.files['file']
+    if file.filename == '':
+        return abort(400)
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(UPLOAD_FOLDER, filename))
+        return redirect(url_for('show_file', filename=filename))
+    return abort(415)
+```
+
+#### 2. 静态文件访问控制
+
+python
+
+```python
+@app.route('/protected/<path:filename>')
+def protected_static(filename):
+    if not current_user.is_authenticated:
+        abort(403)
+    return send_from_directory(app.config['PROTECTED_STATIC_FOLDER'], filename)
+```
+
+------
+
+### 五、性能优化方案
+
+#### 1. 文件压缩配置
+
+使用 `Flask-Compress`：
+
+python
+
+```python
+from flask_compress import Compress
+Compress(app)
+```
+
+配置参数：
+
+python
+
+```python
+app.config['COMPRESS_MIMETYPES'] = [
+    'text/html',
+    'text/css',
+    'text/xml',
+    'application/json',
+    'application/javascript'
+]
+```
+
+#### 2. 浏览器缓存策略
+
+python
+
+```python
+@app.after_request
+def add_header(response):
+    if 'static' in request.path:
+        response.cache_control.max_age = 31536000  # 1年缓存
+    return response
+```
+
+------
+
+### 六、调试技巧
+
+#### 1. 检查静态文件加载
+
+python
+
+```python
+@app.route('/debug-static')
+def debug_static():
+    return str(url_for('static', filename='css/style.css'))  # 输出生成路径
+```
+
+#### 2. 开发工具检测
+
+- Chrome 开发者工具 → Network 标签
+- 检查 HTTP 状态码 (200/404)
+- 确认文件路径与实际位置匹配
+
+------
+
+### 七、完整示例项目
+
+#### 项目结构
+
+bash
+
+```bash
+/myapp
+   ├── app.py
+   ├── assets/          # 静态文件
+   │    ├── css/
+   │    │    └── main.css
+   │    ├── js/
+   │    │    └── app.js
+   │    └── images/
+   ├── templates/
+   │    └── index.html
+   └── config.py
+```
+
+#### app.py 核心代码
+
+python
+
+```python
+from flask import Flask, render_template
+from config import Config
+
+app = Flask(__name__, static_folder='assets')
+app.config.from_object(Config)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+#### 前端模板示例
+
+jinja2
+
+```jinja2
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+    <img src="{{ url_for('static', filename='images/hero.jpg') }}">
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+```
+
+------
+
+### 常见问题解决方案
+
+|     问题现象     |   可能原因    |          解决方法           |
+| :--------------: | :-----------: | :-------------------------: |
+|  404 文件未找到  | 路径拼写错误  |  检查文件名大小写和扩展名   |
+|    CSS 未生效    |  缓存未更新   |   添加版本参数或强制刷新    |
+|   图片显示破损   |   文件损坏    |     重新上传文件并验证      |
+|  JS 函数未定义   | 加载顺序错误  | 确保 DOM 加载完成后执行脚本 |
+| 字体文件无法加载 | MIME 类型错误 |    配置正确的 MIME 类型     |

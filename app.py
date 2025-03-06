@@ -35,7 +35,7 @@ from markupsafe import escape
 #     return 'Test page'
 
 
-name = 'Grey Li'
+name = 'sanyuan'
 movies = [
     {'title': 'My Neighbor Totoro', 'year': '1988'},
     {'title': 'Dead Poets Society', 'year': '1989'},
@@ -50,7 +50,6 @@ movies = [
 ]
 
 from flask import Flask, render_template
-
 # ...
 app = Flask(__name__)
 
@@ -58,3 +57,4 @@ app = Flask(__name__)
 def index():
     return render_template('index.html',
                            name=name, movies=movies)
+
