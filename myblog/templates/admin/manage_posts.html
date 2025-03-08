@@ -1,0 +1,38 @@
+{# templates/admin/manage_users.html #}
+{% extends "base.html" %}
+{% block title %}用户管理{% endblock %}
+
+{% block content %}
+<div class="admin-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-people-fill me-2"></i>用户管理</h2>
+    <a href="#" class="btn btn-success">添加用户</a>
+</div>
+
+<div class="user-table mt-4">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>用户名</th>
+                <th>邮箱</th>
+                <th>注册时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.created_at }}</td>
+                <td>
+                    <a href="#" class="btn btn-sm btn-outline-primary">编辑</a>
+                    <a href="#" class="btn btn-sm btn-outline-danger">删除</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

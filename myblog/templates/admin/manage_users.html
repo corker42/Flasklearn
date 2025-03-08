@@ -1,0 +1,38 @@
+{# templates/admin/manage_posts.html #}
+{% extends "base.html" %}
+{% block title %}文章管理{% endblock %}
+
+{% block content %}
+<div class="admin-header d-flex justify-content-between align-items-center">
+    <h2><i class="bi bi-file-earmark-text-fill me-2"></i>文章管理</h2>
+    <a href="#" class="btn btn-success">新建文章</a>
+</div>
+
+<div class="post-table mt-4">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>标题</th>
+                <th>作者</th>
+                <th>创建时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+            <tr>
+                <td>{{ post.id }}</td>
+                <td>{{ post.title }}</td>
+                <td>{{ post.author.username }}</td>
+                <td>{{ post.created_at }}</td>
+                <td>
+                    <a href="#" class="btn btn-sm btn-outline-primary">编辑</a>
+                    <a href="#" class="btn btn-sm btn-outline-danger">删除</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

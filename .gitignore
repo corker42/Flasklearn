@@ -1,2 +1,4 @@
-.env
+helloflask/.env
 *.db
+config.py
+*.sqlite3
